@@ -1,0 +1,46 @@
+# rootwrap说明
+## docs
+https://wiki.openstack.org/wiki/Rootwrap
+
+这是一个权限控制模块
+可以指定 任何人 是否有 执行 某个命令的 权限
+
+# 配置权限
+
+坏天气好心情:
+OSError: [Errno 13] Permission denied: '/etc/cinder/normal0_backend-e9d5eb17-3388' 
+我使用 cinder 用户组，提示 没有权限， 我正确的 做法是怎样呢？
+是修改 /etc/cinder/ 目录权限，继续创建其他配置文件， 还是 换个 位置呢？@黄扬  
+
+泽塔云 黄扬:
+cinder有root-wrap方法，你把相关操作添加进白名单
+
+坏天气好心情:
+好的，我看看去，
+
+泽塔云 黄扬:
+/etc/cinder/rootwrap.d/volume.filters
+
+# rootwrap
+
+参考这两个
+drv_cfg: CommandFilter, /opt/emc/scaleio/sdc/bin/drv_cfg, root, /opt/emc/scaleio/sdc/bin/drv_cfg, --query_guid
+
+ceph: RegExpFilter, ceph, root, ceph, -v
+
+
+hans ALL=(root) useradd,userdel
+
+[Filters]
+# privileged/__init__.py: priv_context.PrivContext(default)
+# This line ties the superuser privs with the config files, context name,
+# and (implicitly) the actual python code invoked.
+privsep-rootwrap: RegExpFilter, privsep-helper, root, privsep-helper, --config-file, /usr/share/.*, --config-file, /etc/.*,  --privsep_context, os_brick.privileged.default, --privsep_sock_path, /tmp/.*
+
+
+cat > /etc/cinder/rootwrap.d/volume.filters <<"EOF"
+[Filters]
+mkdir: RegExpFilter, mkdir, root, mkdir, -p, /etc/cinder/.*
+chown: RegExpFilter, chown, root, chown, -R, cinder:cinder, /etc/cinder/.*
+
+EOF
